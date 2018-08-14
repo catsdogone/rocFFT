@@ -869,11 +869,52 @@ hipfftResult hipfftExecC2C(hipfftHandle plan,
 
     if(direction == -1)
     {
-        rocfft_execute( plan->ip_forward, in, out, nullptr );
+	// Setup work buffer
+	void *workBuffer = nullptr;
+	size_t workBufferSize = 0;
+	rocfft_plan_get_work_buffer_size(plan->ip_forward, &workBufferSize);
+
+	// Setup exec info to pass work buffer to the library
+	rocfft_execution_info info = nullptr;
+	rocfft_execution_info_create(&info);
+
+	if(workBufferSize > 0)
+	{
+            //printf("size of workbuffer=%d\n", (int)workBufferSize);
+        	hipMalloc(&workBuffer, workBufferSize);
+	        rocfft_execution_info_set_work_buffer(info, workBuffer, workBufferSize);
+	}
+
+        rocfft_execute( plan->ip_forward, in, out, info );
+
+	if(workBuffer)
+  	     	hipFree(workBuffer);
+
+	rocfft_execution_info_destroy(info);
     }
     else
     {
-        rocfft_execute( plan->ip_forward, in, out, nullptr );
+	// Setup work buffer
+	void *workBuffer = nullptr;
+	size_t workBufferSize = 0;
+	rocfft_plan_get_work_buffer_size(plan->ip_inverse, &workBufferSize);
+
+	// Setup exec info to pass work buffer to the library
+	rocfft_execution_info info = nullptr;
+	rocfft_execution_info_create(&info);
+
+	if(workBufferSize > 0)
+	{
+            printf("size of workbuffer=%d\n", (int)workBufferSize);
+        	hipMalloc(&workBuffer, workBufferSize);
+	        rocfft_execution_info_set_work_buffer(info, workBuffer, workBufferSize);
+	}
+        rocfft_execute( plan->ip_inverse, in, out, info );
+
+	if(workBuffer)
+  	     	hipFree(workBuffer);
+
+	rocfft_execution_info_destroy(info);
     }
 
     return HIPFFT_SUCCESS;
